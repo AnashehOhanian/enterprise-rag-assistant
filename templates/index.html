@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enterprise RAG Assistant</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #5d6b7c;
+      --line: #d9e1ea;
+      --paper: #f3f6f8;
+      --card: #ffffff;
+      --user: #e7f4f3;
+      --accent: #0f6e6b;
+      --accent-dark: #0b5552;
+      --danger: #8d2f2f;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Calibri, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    .app {
+      height: 100%;
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px 16px;
+    }
+    header { margin-bottom: 16px; }
+    h1 { margin: 0; font-size: 1.5rem; }
+    header p { margin: 6px 0 0; color: var(--muted); }
+    #transcript {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 4px 16px;
+    }
+    .empty {
+      margin-top: 12vh;
+      text-align: center;
+      color: var(--muted);
+    }
+    .message { display: flex; margin: 0 0 14px; }
+    .message.user { justify-content: flex-end; }
+    .bubble {
+      max-width: min(680px, 92%);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+    }
+    .message.user .bubble { background: var(--user); }
+    .who {
+      margin: 0 0 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .text { margin: 0; white-space: pre-wrap; }
+    .sources { margin-top: 12px; }
+    .sources h2 {
+      margin: 0 0 8px;
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    article {
+      border-top: 1px solid var(--line);
+      padding: 8px 0;
+    }
+    article h3 { margin: 0 0 4px; font-size: 0.95rem; }
+    article p { margin: 0; }
+    .pending { color: var(--muted); }
+    .error { color: var(--danger); }
+    form {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 8px;
+    }
+    label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+    textarea {
+      flex: 1;
+      min-height: 48px;
+      max-height: 160px;
+      border: 0;
+      resize: vertical;
+      padding: 10px;
+      font: inherit;
+      color: inherit;
+      background: transparent;
+    }
+    textarea:focus { outline: none; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 700;
+      color: #fff;
+      background: var(--accent);
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-dark); }
+    button:disabled { opacity: 0.6; cursor: wait; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Enterprise RAG Assistant</h1>
+      <p>Ask a question about the documents you have indexed.</p>
+    </header>
+
+    <div id="transcript" aria-live="polite">
+      <p class="empty" id="empty">Your answers will appear here, with the passages they came from.</p>
+    </div>
+
+    <form id="ask-form">
+      <label for="question">Question</label>
+      <textarea id="question" name="question" rows="2" maxlength="4000" required placeholder="Ask about an indexed document"></textarea>
+      <button id="send" type="submit">Send</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.querySelector("#ask-form");
+    const questionBox = document.querySelector("#question");
+    const transcript = document.querySelector("#transcript");
+    const sendButton = document.querySelector("#send");
+    const empty = document.querySelector("#empty");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const question = questionBox.value.trim();
+      if (!question) {
+        return;
+      }
+      questionBox.value = "";
+      appendMessage("user", "You", question);
+      const pending = appendMessage("assistant", "Assistant", "Searching indexed documents…", true);
+      sendButton.disabled = true;
+      try {
+        const response = await fetch("/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: question, top_k: 4 })
+        });
+        const body = await response.json();
+        if (!response.ok) {
+          const message = body.error && body.error.message ? body.error.message : "The query failed.";
+          fillMessage(pending, message, [], true);
+          return;
+        }
+        fillMessage(pending, body.answer || "No answer was returned.", body.sources || [], false, body.mode);
+      } catch (_error) {
+        fillMessage(pending, "The server could not be reached.", [], true);
+      } finally {
+        sendButton.disabled = false;
+        questionBox.focus();
+      }
+    });
+
+    function appendMessage(role, who, text, pending) {
+      if (empty) {
+        empty.remove();
+      }
+      const item = document.createElement("div");
+      item.className = "message " + role;
+      item.innerHTML = '<div class="bubble"><p class="who"></p><p class="text"></p></div>';
+      item.querySelector(".who").textContent = who;
+      const textNode = item.querySelector(".text");
+      textNode.textContent = text;
+      if (pending) {
+        textNode.classList.add("pending");
+      }
+      transcript.appendChild(item);
+      transcript.scrollTop = transcript.scrollHeight;
+      return item;
+    }
+
+    function fillMessage(item, text, sources, isError, mode) {
+      const bubble = item.querySelector(".bubble");
+      const textNode = item.querySelector(".text");
+      textNode.classList.remove("pending");
+      textNode.classList.toggle("error", Boolean(isError));
+      textNode.textContent = text;
+      if (!isError && sources.length) {
+        const block = document.createElement("div");
+        block.className = "sources";
+        const heading = document.createElement("h2");
+        heading.textContent = mode ? "Sources · " + mode : "Sources";
+        block.appendChild(heading);
+        sources.forEach((source) => {
+          const article = document.createElement("article");
+          const title = document.createElement("h3");
+          title.textContent = source.filename + " · chunk " + source.chunk_index + " · score " + source.score;
+          const excerpt = document.createElement("p");
+          excerpt.textContent = source.excerpt;
+          article.append(title, excerpt);
+          block.appendChild(article);
+        });
+        bubble.appendChild(block);
+      }
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+  </script>
+</body>
+</html>

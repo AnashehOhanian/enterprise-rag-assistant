@@ -1,0 +1,15 @@
+# Enterprise RAG assistant. Requires Python 3.11+.
+# CPU-only hosts should install the PyTorch CPU wheel before this file.
+# The README has the exact command.
+
+Flask>=3.0.3
+streamlit>=1.40.0
+python-dotenv>=1.0.1
+numpy>=1.26.0
+torch>=2.2.2
+transformers>=4.44.2
+sentence-transformers>=3.0.1
+langchain-core>=0.3.15
+langchain-text-splitters>=0.3.2
+pypdf>=5.0.0
+gunicorn>=23.0.0
