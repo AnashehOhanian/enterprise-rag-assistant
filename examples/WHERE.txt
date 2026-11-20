@@ -1,0 +1,9 @@
+Each folder starts with sample-preview.jpg. The gallery shows that picture until you add your own.
+
+Drop real Safeguard 4U photos (png, jpg, jpeg, or webp) into the matching folder.
+Any file other than sample-preview replaces the sample in the gallery.
+
+examples/modern-horizontal-gate
+examples/ornamental-iron-gate
+examples/stair-railing
+examples/outdoor-patio-frame

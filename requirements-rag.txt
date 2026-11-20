@@ -1,0 +1,9 @@
+# Document indexing extras. Free hosts skip this file.
+# PyTorch is installed separately so the host does not pull a CUDA build:
+#   python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   python -m pip install -r requirements-rag.txt
+
+torch>=2.2.2
+transformers>=4.44.2
+sentence-transformers>=3.0.1
+pypdf>=5.0.0

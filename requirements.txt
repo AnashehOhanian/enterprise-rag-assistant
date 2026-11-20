@@ -1,15 +1,12 @@
-# Enterprise RAG assistant. Requires Python 3.11+.
-# CPU-only hosts should install the PyTorch CPU wheel before this file.
-# The README has the exact command.
+# Estimator and API. Streamlit Community Cloud and Render install this file.
+# Document indexing needs the extra file below. Install a CPU PyTorch wheel
+# first, then: python -m pip install -r requirements-rag.txt
 
 Flask>=3.0.3
 streamlit>=1.40.0
+pillow>=10.0.0
 python-dotenv>=1.0.1
 numpy>=1.26.0
-torch>=2.2.2
-transformers>=4.44.2
-sentence-transformers>=3.0.1
 langchain-core>=0.3.15
 langchain-text-splitters>=0.3.2
-pypdf>=5.0.0
 gunicorn>=23.0.0

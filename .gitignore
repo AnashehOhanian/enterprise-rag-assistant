@@ -1,6 +1,7 @@
 venv/
 .venv/
 .env
+.streamlit/secrets.toml
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -15,6 +16,8 @@ build/
 .hf_cache/
 *.sqlite
 *.sqlite3
+shop_requests.jsonl
+shop_requests/
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm

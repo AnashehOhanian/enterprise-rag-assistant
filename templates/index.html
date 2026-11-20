@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Enterprise RAG Assistant</title>
+  <title>Safeguard 4U</title>
   <style>
     :root {
       color-scheme: light;
@@ -125,17 +125,17 @@
 <body>
   <div class="app">
     <header>
-      <h1>Enterprise RAG Assistant</h1>
-      <p>Ask a question about the documents you have indexed.</p>
+      <h1>Safeguard 4U</h1>
+      <p>Ask about a gate, railing, stair, or patio. Answers are rough catalog ballparks. Final price and scope wait on shop review.</p>
     </header>
 
     <div id="transcript" aria-live="polite">
-      <p class="empty" id="empty">Your answers will appear here, with the passages they came from.</p>
+      <p class="empty" id="empty">Ask about a gate, railing, stair, or patio. A rough catalog answer will show here.</p>
     </div>
 
     <form id="ask-form">
       <label for="question">Question</label>
-      <textarea id="question" name="question" rows="2" maxlength="4000" required placeholder="Ask about an indexed document"></textarea>
+      <textarea id="question" name="question" rows="2" maxlength="800" required placeholder="Example: hello, I need a small gate"></textarea>
       <button id="send" type="submit">Send</button>
     </form>
   </div>
@@ -146,6 +146,7 @@
     const transcript = document.querySelector("#transcript");
     const sendButton = document.querySelector("#send");
     const empty = document.querySelector("#empty");
+    const history = [];
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -155,23 +156,26 @@
       }
       questionBox.value = "";
       appendMessage("user", "You", question);
-      const pending = appendMessage("assistant", "Assistant", "Searching indexed documents…", true);
+      const pending = appendMessage("assistant", "Safeguard", "Checking the catalog…", true);
       sendButton.disabled = true;
       try {
-        const response = await fetch("/query", {
+        const response = await fetch("/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: question, top_k: 4 })
+          body: JSON.stringify({ message: question, history: history.slice(-16) })
         });
         const body = await response.json();
         if (!response.ok) {
-          const message = body.error && body.error.message ? body.error.message : "The query failed.";
-          fillMessage(pending, message, [], true);
+          const message = body.error && body.error.message ? body.error.message : "The question could not be answered.";
+          fillMessage(pending, message, true);
           return;
         }
-        fillMessage(pending, body.answer || "No answer was returned.", body.sources || [], false, body.mode);
+        const reply = body.reply || "No answer was returned.";
+        history.push({ role: "user", content: question });
+        history.push({ role: "assistant", content: reply });
+        fillMessage(pending, reply, false);
       } catch (_error) {
-        fillMessage(pending, "The server could not be reached.", [], true);
+        fillMessage(pending, "The server could not be reached.", true);
       } finally {
         sendButton.disabled = false;
         questionBox.focus();
@@ -196,29 +200,11 @@
       return item;
     }
 
-    function fillMessage(item, text, sources, isError, mode) {
-      const bubble = item.querySelector(".bubble");
+    function fillMessage(item, text, isError) {
       const textNode = item.querySelector(".text");
       textNode.classList.remove("pending");
       textNode.classList.toggle("error", Boolean(isError));
       textNode.textContent = text;
-      if (!isError && sources.length) {
-        const block = document.createElement("div");
-        block.className = "sources";
-        const heading = document.createElement("h2");
-        heading.textContent = mode ? "Sources · " + mode : "Sources";
-        block.appendChild(heading);
-        sources.forEach((source) => {
-          const article = document.createElement("article");
-          const title = document.createElement("h3");
-          title.textContent = source.filename + " · chunk " + source.chunk_index + " · score " + source.score;
-          const excerpt = document.createElement("p");
-          excerpt.textContent = source.excerpt;
-          article.append(title, excerpt);
-          block.appendChild(article);
-        });
-        bubble.appendChild(block);
-      }
       transcript.scrollTop = transcript.scrollHeight;
     }
   </script>
